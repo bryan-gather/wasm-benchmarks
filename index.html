@@ -19,101 +19,87 @@
     <br>
     <button id="simplifyButton">Simplify</button>
     </div>
-    <script>
-        const canvas = document.getElementById('drawingCanvas');
-        const ctx = canvas.getContext('2d');
-        let drawing = false;
-        let points = [];
+    <script type="module">
 
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mousemove', draw);
-        document.getElementById('simplifyButton').addEventListener('click', simplifyDrawing);
+        import init, { simplify_rdp } from "./rust/pkg/rdp.js";
+        import { rdp } from "./js/rdp.js"
 
-        function startDrawing(event) {
-            drawing = true;
-            points.push(getMousePos(canvas, event));
-        }
+        async function run() {
+            await init();
+            console.log("Library initialized.")
 
-        function stopDrawing() {
-            drawing = false;
-            ctx.beginPath();
-        }
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            let points = [];
 
-        function draw(event) {
-            if (!drawing) return;
-            const pos = getMousePos(canvas, event);
-            points.push(pos);
-            ctx.lineTo(pos[0], pos[1]);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(pos[0], pos[1]);
-        }
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mousemove', draw);
+            document.getElementById('simplifyButton').addEventListener('click', simplifyDrawing);
 
-        function getMousePos(canvas, event) {
-            const rect = canvas.getBoundingClientRect();
-            return [event.clientX - rect.left, event.clientY - rect.top];
-        }
-
-        function getPerpendicularDistance(point, lineStart, lineEnd) {
-            const [x, y] = point;
-            const [x1, y1] = lineStart;
-            const [x2, y2] = lineEnd;
-
-            const area = Math.abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1));
-            const base = Math.hypot(x2 - x1, y2 - y1);
-            return area / base;
-        }
-
-        function rdp(points, epsilon) {
-            if (points.length < 3) {
-                return points;
+            function startDrawing(event) {
+                drawing = true;
+                points.push(getMousePos(canvas, event));
             }
 
-            let dmax = 0;
-            let index = 0;
-            const end = points.length - 1;
+            function stopDrawing() {
+                drawing = false;
+                ctx.beginPath();
+            }
 
-            for (let i = 1; i < end; i++) {
-                const d = getPerpendicularDistance(points[i], points[0], points[end]);
-                if (d > dmax) {
-                    index = i;
-                    dmax = d;
+            function draw(event) {
+                if (!drawing) return;
+                const pos = getMousePos(canvas, event);
+                points.push(pos);
+                ctx.lineTo(pos[0], pos[1]);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(pos[0], pos[1]);
+            }
+
+            function getMousePos(canvas, event) {
+                const rect = canvas.getBoundingClientRect();
+                return [event.clientX - rect.left, event.clientY - rect.top];
+            }
+
+            function getPerpendicularDistance(point, lineStart, lineEnd) {
+                const [x, y] = point;
+                const [x1, y1] = lineStart;
+                const [x2, y2] = lineEnd;
+
+                const area = Math.abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1));
+                const base = Math.hypot(x2 - x1, y2 - y1);
+                return area / base;
+            }
+
+
+            function simplifyDrawing() {
+                const epsilon = parseFloat(document.getElementById('epsilon').value);
+                console.log("Input: ", points);
+                const simplifiedPoints = rdp(points, epsilon);
+                console.log("Output: ",simplifiedPoints);
+
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Redraw the simplified points
+                ctx.beginPath();
+                for (let i = 0; i < simplifiedPoints.length; i++) {
+                    const [x, y] = simplifiedPoints[i];
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
                 }
+                ctx.stroke();
+
+                // Reset points to the simplified version
+                points = simplifiedPoints;
             }
-
-            if (dmax > epsilon) {
-                const recResults1 = rdp(points.slice(0, index + 1), epsilon);
-                const recResults2 = rdp(points.slice(index), epsilon);
-
-                return recResults1.slice(0, -1).concat(recResults2);
-            } else {
-                return [points[0], points[end]];
-            }
-        }
-
-        function simplifyDrawing() {
-            const epsilon = parseFloat(document.getElementById('epsilon').value);
-            const simplifiedPoints = rdp(points, epsilon);
-
-            // Clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Redraw the simplified points
-            ctx.beginPath();
-            for (let i = 0; i < simplifiedPoints.length; i++) {
-                const [x, y] = simplifiedPoints[i];
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
-
-            // Reset points to the simplified version
-            points = simplifiedPoints;
-        }
+    }
+    run();
     </script>
 </body>
 </html>
