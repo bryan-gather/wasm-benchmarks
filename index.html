@@ -13,7 +13,12 @@
 <body>
     <h1>Draw on the canvas</h1>
     <canvas id="drawingCanvas" width="800" height="600"></canvas>
+    <div>
+    <label for="epsilon">Epsilon:</label>
+    <input type="number" id="epsilon" value="5.0" step="0.1">
+    <br>
     <button id="simplifyButton">Simplify</button>
+    </div>
     <script>
         const canvas = document.getElementById('drawingCanvas');
         const ctx = canvas.getContext('2d');
@@ -88,7 +93,7 @@
         }
 
         function simplifyDrawing() {
-            const epsilon = 5.0; // Adjust epsilon as needed
+            const epsilon = parseFloat(document.getElementById('epsilon').value);
             const simplifiedPoints = rdp(points, epsilon);
 
             // Clear the canvas
