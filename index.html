@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDP Line Simplification</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Draw on the canvas</h1>
+    <canvas id="drawingCanvas" width="800" height="600"></canvas>
+    <button id="simplifyButton">Simplify</button>
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let points = [];
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        document.getElementById('simplifyButton').addEventListener('click', simplifyDrawing);
+
+        function startDrawing(event) {
+            drawing = true;
+            points.push(getMousePos(canvas, event));
+        }
+
+        function stopDrawing() {
+            drawing = false;
+            ctx.beginPath();
+        }
+
+        function draw(event) {
+            if (!drawing) return;
+            const pos = getMousePos(canvas, event);
+            points.push(pos);
+            ctx.lineTo(pos[0], pos[1]);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos[0], pos[1]);
+        }
+
+        function getMousePos(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            return [event.clientX - rect.left, event.clientY - rect.top];
+        }
+
+        function getPerpendicularDistance(point, lineStart, lineEnd) {
+            const [x, y] = point;
+            const [x1, y1] = lineStart;
+            const [x2, y2] = lineEnd;
+
+            const area = Math.abs((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1));
+            const base = Math.hypot(x2 - x1, y2 - y1);
+            return area / base;
+        }
+
+        function rdp(points, epsilon) {
+            if (points.length < 3) {
+                return points;
+            }
+
+            let dmax = 0;
+            let index = 0;
+            const end = points.length - 1;
+
+            for (let i = 1; i < end; i++) {
+                const d = getPerpendicularDistance(points[i], points[0], points[end]);
+                if (d > dmax) {
+                    index = i;
+                    dmax = d;
+                }
+            }
+
+            if (dmax > epsilon) {
+                const recResults1 = rdp(points.slice(0, index + 1), epsilon);
+                const recResults2 = rdp(points.slice(index), epsilon);
+
+                return recResults1.slice(0, -1).concat(recResults2);
+            } else {
+                return [points[0], points[end]];
+            }
+        }
+
+        function simplifyDrawing() {
+            const epsilon = 5.0; // Adjust epsilon as needed
+            const simplifiedPoints = rdp(points, epsilon);
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Redraw the simplified points
+            ctx.beginPath();
+            for (let i = 0; i < simplifiedPoints.length; i++) {
+                const [x, y] = simplifiedPoints[i];
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+
+            // Reset points to the simplified version
+            points = simplifiedPoints;
+        }
+    </script>
+</body>
+</html>
