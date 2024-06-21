@@ -2,22 +2,33 @@ use std::f64;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
-    fn get_perpendicular_distance(
-        point: (f64, f64),
-        line_start: (f64, f64),
-        line_end: (f64, f64),
-    ) -> f64 {
-        let (x, y) = point;
-        let (x1, y1) = line_start;
-        let (x2, y2) = line_end;
+#[derive(Clone, Copy)]
+pub struct Point {
+    x: f64,
+    y: f64,
+}
+
+#[wasm_bindgen]
+impl Point {
+    #[wasm_bindgen(constructor)]
+    pub fn new(x: f64, y: f64) -> Point {
+        Point { x, y }
+    }
+}
+
+#[wasm_bindgen]
+pub fn simplify_rdp(points: Vec<Point>, epsilon: f64) -> Vec<Point> {
+    fn get_perpendicular_distance(point: Point, line_start: Point, line_end: Point) -> f64 {
+        let Point { x, y } = point;
+        let Point { x: x1, y: y1 } = line_start;
+        let Point { x: x2, y: y2 } = line_end;
 
         let area = ((x2 - x1) * (y1 - y) - (x1 - x) * (y2 - y1)).abs();
         let base = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
         area / base
     }
 
-    fn rdp(points: &[(f64, f64)], epsilon: f64) -> Vec<(f64, f64)> {
+    fn rdp(points: &[Point], epsilon: f64) -> Vec<Point> {
         if points.len() < 3 {
             return points.to_vec();
         }
@@ -28,7 +39,7 @@ pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
 
         for i in 1..end {
             let d = get_perpendicular_distance(points[i], points[0], points[end]);
-            if d > dmax {
+            if dmax < d {
                 index = i;
                 dmax = d;
             }
@@ -46,10 +57,5 @@ pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
         }
     }
 
-    let points: Vec<(f64, f64)> = points.chunks(2).map(|chunk| (chunk[0], chunk[1])).collect();
-    let simplified_points = rdp(&points, epsilon);
-    simplified_points
-        .into_iter()
-        .flat_map(|(x, y)| vec![x, y])
-        .collect()
+    rdp(&points, epsilon)
 }

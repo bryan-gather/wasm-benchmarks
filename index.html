@@ -36,7 +36,7 @@
     </div>
     <script type="module">
 
-        import init, { simplify_rdp } from "./rust/pkg/rdp.js";
+        import init, { simplify_rdp, Point } from "./rust/pkg/rdp.js";
         import { generateKochSnowflake, generateSerpentineCurve } from "./test_data/test_data.js"
         import { rdp } from "./js/rdp.js"
 
@@ -95,17 +95,11 @@
 
 
             function rdp_wasm(points, epsilon) {
-                const flattened_points = points.flat();
+                const flattened_points = points.map(p => new Point(p[0], p[1]));
 
-                const flatArrayToTuples = (flatArray) => {
-                    const tuples = [];
-                    for (let i = 0; i < flatArray.length; i += 2) {
-                        tuples.push([flatArray[i], flatArray[i + 1]]);
-                    }
-                    return tuples;
-                }
                 const pts = simplify_rdp(flattened_points, epsilon);
-                return flatArrayToTuples(pts);
+                return pts.map(p => [p.x, p.y]);
+                //return flatArrayToTuples(pts);
             }
 
             function bench(name, f) {
@@ -182,6 +176,7 @@
                     console.log("Using wasm output")
                     simplifiedPoints = simplifiedPointsWasm
                 }
+                console.log("Output points: ", points);
                 // Clear the canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
