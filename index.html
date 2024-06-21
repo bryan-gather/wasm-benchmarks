@@ -74,10 +74,24 @@
             }
 
 
+            function rdp_wasm(points, epsilon) {
+                const flattened_points = points.flat();
+
+                const flatArrayToTuples = (flatArray) => {
+                    const tuples = [];
+                    for (let i = 0; i < flatArray.length; i += 2) {
+                        tuples.push([flatArray[i], flatArray[i + 1]]);
+                    }
+                    return tuples;
+                }
+                const pts = simplify_rdp(flattened_points, epsilon);
+                return flatArrayToTuples(pts);
+            }
+
             function simplifyDrawing() {
                 const epsilon = parseFloat(document.getElementById('epsilon').value);
                 console.log("Input: ", points);
-                const simplifiedPoints = rdp(points, epsilon);
+                const simplifiedPoints = rdp_wasm(points, epsilon);
                 console.log("Output: ",simplifiedPoints);
 
                 // Clear the canvas

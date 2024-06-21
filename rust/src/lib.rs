@@ -8,7 +8,6 @@ extern "C" {
     fn log(s: &str);
 }
 
-#[wasm_bindgen]
 pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
     fn get_perpendicular_distance(
         point: (f64, f64),
