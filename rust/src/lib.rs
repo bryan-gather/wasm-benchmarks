@@ -1,13 +1,7 @@
 use std::f64;
 use wasm_bindgen::prelude::*;
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
+#[wasm_bindgen]
 pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
     fn get_perpendicular_distance(
         point: (f64, f64),
@@ -52,12 +46,8 @@ pub fn simplify_rdp(points: &[f64], epsilon: f64) -> Vec<f64> {
         }
     }
 
-    console_error_panic_hook::set_once();
-    log(&format!("Points: {:?}", points));
     let points: Vec<(f64, f64)> = points.chunks(2).map(|chunk| (chunk[0], chunk[1])).collect();
-    log("Mapping to points");
     let simplified_points = rdp(&points, epsilon);
-    log("Simplified points collected");
     simplified_points
         .into_iter()
         .flat_map(|(x, y)| vec![x, y])
