@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,18 +11,33 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Draw on the canvas</h1>
     <canvas id="drawingCanvas" width="800" height="600"></canvas>
     <div>
-    <label for="epsilon">Epsilon:</label>
-    <input type="number" id="epsilon" value="5.0" step="0.1">
+        <label for="epsilon">Epsilon:</label>
+        <input type="number" id="epsilon" value="5.0" step="0.1">
+        <br>
+        <label for="algorithm">Algorithm:</label>
+        <select id="algorithm">
+            <option value="js">JS</option>
+            <option value="wasm">WebAssembly</option>
+        </select>
+    </div>
     <br>
     <button id="simplifyButton">Simplify</button>
+    <br>
+    Test Data
+    <button id="serpentineButton">Generate Serpentine Curve</button>
+    <br>
+    Benchmark
+    <button id="runBenchmark">Run Benchmark (see console)</button>
     </div>
     <script type="module">
 
         import init, { simplify_rdp } from "./rust/pkg/rdp.js";
+        import { generateKochSnowflake, generateSerpentineCurve } from "./test_data/test_data.js"
         import { rdp } from "./js/rdp.js"
 
         async function run() {
@@ -37,6 +53,10 @@
             canvas.addEventListener('mouseup', stopDrawing);
             canvas.addEventListener('mousemove', draw);
             document.getElementById('simplifyButton').addEventListener('click', simplifyDrawing);
+
+            document.getElementById('serpentineButton').addEventListener('click', generateSerpentine);
+
+            document.getElementById('runBenchmark').addEventListener('click', executeBenchmark);
 
             function startDrawing(event) {
                 drawing = true;
@@ -88,12 +108,80 @@
                 return flatArrayToTuples(pts);
             }
 
-            function simplifyDrawing() {
-                const epsilon = parseFloat(document.getElementById('epsilon').value);
-                console.log("Input: ", points);
-                const simplifiedPoints = rdp_wasm(points, epsilon);
-                console.log("Output: ",simplifiedPoints);
+            function bench(name, f) {
+                console.log("Benchmarking: ", name)
+                const start = performance.now();
+                const ret = f();
+                const end = performance.now();
+                console.log("Benchmarking: ", name, " took ", end - start, "ms");
+                return ret;
+            }
 
+            const generateTestData  = (size) => {
+                return generateSerpentineCurve(size, 500, 250)
+            }
+
+            const runBenchmark = (func, inputSizes, iterations) => {
+                const benchmark = (func, input) => {
+                    const start = performance.now();
+                    func(input);
+                    const end = performance.now();
+                    return end - start;
+                };
+
+                const results = inputSizes.map(size => {
+                    const input = generateTestData(size);
+                    const times = [];
+
+                    for (let i = 0; i < iterations; i++) {
+                        times.push(benchmark(func, input));
+                    }
+
+                    const avg = times.reduce((a, b) => a + b, 0) / iterations;
+                    const min = Math.min(...times);
+                    const max = Math.max(...times);
+
+                    return { size, avg, min, max };
+                });
+
+                return results;
+            }
+
+            function drawPoints(points) {
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+                // Draw the points
+                ctx.beginPath();
+                for (let i = 0; i < points.length; i++) {
+                    const [x, y] = points[i];
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            function simplifyDrawing() {
+                console.log("Input points: ", points);
+                const epsilon = parseFloat(document.getElementById('epsilon').value);
+                const simplifiedPointsJs = bench("js", () => rdp(points, epsilon));
+                const simplifiedPointsWasm = bench("wasm", () => rdp_wasm(points, epsilon));
+
+                const algorithm = document.getElementById('algorithm').value;
+
+                let simplifiedPoints;
+
+                if (algorithm === 'js') {
+                    console.log("Using js output")
+                    simplifiedPoints = simplifiedPointsJs
+                } else if (algorithm === 'wasm') {
+                    console.log("Using wasm output")
+                    simplifiedPoints = simplifiedPointsWasm
+                }
                 // Clear the canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -112,8 +200,25 @@
                 // Reset points to the simplified version
                 points = simplifiedPoints;
             }
-    }
-    run();
+
+            function executeBenchmark() {
+
+                runBenchmark(rdp, [10, 100, 1000, 10_000, 100_000, 500_000], 50).forEach(result => {
+                    console.log("Benchmark result (JS) ", result);
+                });
+                runBenchmark(rdp_wasm, [10, 100, 1000, 10_000, 100_000, 500_000], 50).forEach(result => {
+                    console.log("Benchmark result (WASM) ", result);
+                });
+            }
+
+            function generateSerpentine() {
+                points = generateSerpentineCurve(10_000, 500, 250);
+                drawPoints(points);
+            }
+
+        }
+        run();
     </script>
 </body>
+
 </html>
