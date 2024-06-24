@@ -95,11 +95,7 @@
 
 
             function rdp_wasm(points, epsilon) {
-                const flattened_points = points.map(p => new Point(p[0], p[1]));
-
-                const pts = simplify_rdp(flattened_points, epsilon);
-                return pts.map(p => [p.x, p.y]);
-                //return flatArrayToTuples(pts);
+                return simplify_rdp(points, epsilon);
             }
 
             function bench(name, f) {
@@ -115,7 +111,7 @@
                 return generateSerpentineCurve(size, 500, 250)
             }
 
-            const runBenchmark = (func, inputSizes, iterations) => {
+            const runBenchmark = (func, inputSizes, iterations, processData) => {
                 const benchmark = (func, input) => {
                     const start = performance.now();
                     func(input);
@@ -128,7 +124,8 @@
                     const times = [];
 
                     for (let i = 0; i < iterations; i++) {
-                        times.push(benchmark(func, input));
+                        const processedInput = input.map(processData);
+                        times.push(benchmark(func, processedInput));
                     }
 
                     const avg = times.reduce((a, b) => a + b, 0) / iterations;
@@ -162,8 +159,11 @@
             function simplifyDrawing() {
                 console.log("Input points: ", points);
                 const epsilon = parseFloat(document.getElementById('epsilon').value);
+                const wasm_points = points.map(p => new Point(p[0], p[1]));
                 const simplifiedPointsJs = bench("js", () => rdp(points, epsilon));
-                const simplifiedPointsWasm = bench("wasm", () => rdp_wasm(points, epsilon));
+                const simplifiedPointsWasm = bench("wasm", () => rdp_wasm(wasm_points, epsilon));
+
+                const wasm_points_to_js = simplifiedPointsWasm.map(p => [p.x, p.y]);
 
                 const algorithm = document.getElementById('algorithm').value;
 
@@ -174,7 +174,7 @@
                     simplifiedPoints = simplifiedPointsJs
                 } else if (algorithm === 'wasm') {
                     console.log("Using wasm output")
-                    simplifiedPoints = simplifiedPointsWasm
+                    simplifiedPoints = wasm_points_to_js
                 }
                 console.log("Output points: ", points);
                 // Clear the canvas
@@ -198,10 +198,10 @@
 
             function executeBenchmark() {
 
-                runBenchmark(rdp, [10, 100, 1000, 10_000, 100_000, 500_000], 50).forEach(result => {
+                runBenchmark(rdp, [10, 100, 1000, 10_000, 100_000, 500_000], 50, (point) => point).forEach(result => {
                     console.log("Benchmark result (JS) ", result);
                 });
-                runBenchmark(rdp_wasm, [10, 100, 1000, 10_000, 100_000, 500_000], 50).forEach(result => {
+                runBenchmark(rdp_wasm, [10, 100, 1000, 10_000, 100_000, 500_000], 50, (point) => new Point(point[0], point[1])).forEach(result => {
                     console.log("Benchmark result (WASM) ", result);
                 });
             }
